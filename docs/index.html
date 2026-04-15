@@ -68,6 +68,40 @@
             --accent-red: #ff453a;
             --accent-yellow: #ffd60a;
             --accent-teal: #6ac4dc;
+            --nav-bg: rgba(10, 10, 15, 0.7);
+            --btn-primary-text: #000;
+            --ambient-green: rgba(48, 209, 88, 0.06);
+            --ambient-blue: rgba(10, 132, 255, 0.04);
+            --ambient-purple: rgba(191, 90, 242, 0.03);
+            --card-shadow: rgba(0, 0, 0, 0.3);
+            --hint-color: rgba(255, 255, 255, 0.2);
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f5f5f7;
+                --surface: rgba(0, 0, 0, 0.03);
+                --surface-hover: rgba(0, 0, 0, 0.06);
+                --glass: rgba(255, 255, 255, 0.7);
+                --glass-border: rgba(0, 0, 0, 0.1);
+                --text: #1d1d1f;
+                --text-secondary: #6e6e73;
+                --accent: #28a745;
+                --accent-blue: #0071e3;
+                --accent-purple: #a550c0;
+                --accent-orange: #e8790a;
+                --accent-cyan: #0ea5e9;
+                --accent-red: #e53e3e;
+                --accent-yellow: #c79b00;
+                --accent-teal: #4fa8bf;
+                --nav-bg: rgba(245, 245, 247, 0.8);
+                --btn-primary-text: #fff;
+                --ambient-green: rgba(40, 167, 69, 0.05);
+                --ambient-blue: rgba(0, 113, 227, 0.04);
+                --ambient-purple: rgba(165, 80, 192, 0.03);
+                --card-shadow: rgba(0, 0, 0, 0.08);
+                --hint-color: rgba(0, 0, 0, 0.25);
+            }
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -85,9 +119,9 @@
             position: fixed;
             top: -50%; left: -50%;
             width: 200%; height: 200%;
-            background: radial-gradient(ellipse at 30% 20%, rgba(48, 209, 88, 0.06) 0%, transparent 50%),
-                        radial-gradient(ellipse at 70% 60%, rgba(10, 132, 255, 0.04) 0%, transparent 50%),
-                        radial-gradient(ellipse at 50% 80%, rgba(191, 90, 242, 0.03) 0%, transparent 50%);
+            background: radial-gradient(ellipse at 30% 20%, var(--ambient-green) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 60%, var(--ambient-blue) 0%, transparent 50%),
+                        radial-gradient(ellipse at 50% 80%, var(--ambient-purple) 0%, transparent 50%);
             z-index: -1;
             animation: ambientShift 20s ease-in-out infinite alternate;
         }
@@ -104,7 +138,7 @@
             padding: 20px 0;
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            background: rgba(10, 10, 15, 0.7);
+            background: var(--nav-bg);
             border-bottom: 1px solid var(--glass-border);
             position: sticky; top: 0; z-index: 100;
         }
@@ -124,8 +158,8 @@
         .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
         .nav-links a:hover { color: var(--text); }
         .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.2s; }
-        .btn-primary { background: var(--accent); color: #000; }
-        .btn-primary:hover { background: #3bde63; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(48, 209, 88, 0.3); }
+        .btn-primary { background: var(--accent); color: var(--btn-primary-text); }
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(48, 209, 88, 0.3); }
         .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--glass-border); }
         .btn-secondary:hover { background: var(--surface-hover); transform: translateY(-1px); }
 
@@ -139,8 +173,7 @@
         }
         .hero h1 {
             font-size: 56px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.1; margin-bottom: 20px;
-            background: linear-gradient(135deg, var(--text) 0%, var(--text-secondary) 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            color: var(--text);
         }
         .hero p { font-size: 18px; color: var(--text-secondary); max-width: 540px; margin: 0 auto 36px; line-height: 1.7; }
         .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
@@ -368,33 +401,12 @@
             font-size: 13px; font-weight: 600; color: var(--text-secondary);
             letter-spacing: 0.5px; margin-bottom: 4px;
         }
-        .style-variant {
-            display: flex; align-items: center; gap: 14px;
-            opacity: 0; transform: translateY(8px);
-            transition: opacity 0.4s, transform 0.4s;
+        .style-label {
+            font-size: 12px; font-weight: 500; color: var(--text-secondary);
+            opacity: 0; transition: opacity 0.3s;
+            margin-top: 8px;
         }
-        .style-variant.show { opacity: 1; transform: translateY(0); }
-        .style-variant-label {
-            font-size: 11px; color: var(--text-secondary); width: 90px; text-align: right;
-        }
-        .style-variant-bar {
-            background: rgba(30, 30, 35, 0.9); border: 1px solid var(--glass-border);
-            border-radius: 8px; padding: 6px 12px;
-            display: flex; align-items: center; gap: 10px;
-            font-family: 'SF Mono','Menlo',monospace; font-size: 10px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-        }
-        .sv-item { display: flex; align-items: center; gap: 3px; }
-        .sv-label { font-size: 7px; font-weight: 600; letter-spacing: 0.4px; color: var(--text-secondary); }
-        .sv-bar { width: 20px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
-        .sv-fill { height: 100%; border-radius: 2px; }
-        .sv-val { font-size: 8px; font-weight: 600; min-width: 14px; }
-        .sv-dot { width: 4px; height: 4px; border-radius: 50%; }
-        .sv-stacked { flex-direction: column; gap: 0; align-items: flex-start; }
-        .sv-stacked-row { display: flex; align-items: center; gap: 3px; height: 8px; }
-        .sv-stacked .sv-bar { width: 20px; height: 2px; }
-        .sv-stacked .sv-val { font-size: 7px; }
-        .sv-stacked .sv-label { font-size: 6px; width: 16px; }
+        .style-label.visible { opacity: 1; }
 
         /* Features */
         .features { padding: 80px 0; }
@@ -405,7 +417,7 @@
             background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px;
             backdrop-filter: blur(10px); transition: all 0.3s;
         }
-        .feature-card:hover { background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+        .feature-card:hover { background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 8px 30px var(--card-shadow); }
         .feature-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 14px; }
         .feature-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
         .feature-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
@@ -869,60 +881,14 @@
                 <div class="dp-row"><span class="dp-row-label">Temperature</span><span class="dp-row-value">34.2&deg;C</span></div>
             </div>
 
-            <!-- Style Showcase -->
+            <!-- Style Showcase (cycles the actual menu bar) -->
             <div class="style-showcase" id="styleShowcase">
                 <div class="style-showcase-title">Menu Bar Styles</div>
-                <div class="style-variant" id="sv-horizontal">
-                    <span class="style-variant-label">Horizontal</span>
-                    <div class="style-variant-bar">
-                        <div class="sv-item"><span class="sv-label">CPU</span><div class="sv-bar"><div class="sv-fill" style="width:19%;background:var(--accent-blue)"></div></div><span class="sv-val" style="color:var(--accent-blue)">19</span></div>
-                        <div class="sv-item"><span class="sv-label">MEM</span><div class="sv-bar"><div class="sv-fill" style="width:42%;background:var(--accent)"></div></div><span class="sv-val" style="color:var(--accent)">42</span></div>
-                        <div class="sv-item"><span class="sv-label">HD</span><div class="sv-bar"><div class="sv-fill" style="width:65%;background:var(--accent-orange)"></div></div><span class="sv-val" style="color:var(--accent-orange)">65</span></div>
-                        <div class="sv-dot" style="background:var(--accent);box-shadow:0 0 4px rgba(48,209,88,0.5)"></div>
-                    </div>
-                </div>
-                <div class="style-variant" id="sv-stacked">
-                    <span class="style-variant-label">Stacked</span>
-                    <div class="style-variant-bar">
-                        <div class="sv-stacked">
-                            <div class="sv-stacked-row"><span class="sv-label">CPU</span><div class="sv-bar"><div class="sv-fill" style="width:19%;background:var(--accent-blue)"></div></div><span class="sv-val" style="color:var(--accent-blue)">19</span></div>
-                            <div class="sv-stacked-row"><span class="sv-label">MEM</span><div class="sv-bar"><div class="sv-fill" style="width:42%;background:var(--accent)"></div></div><span class="sv-val" style="color:var(--accent)">42</span></div>
-                            <div class="sv-stacked-row"><span class="sv-label">HD</span><div class="sv-bar"><div class="sv-fill" style="width:65%;background:var(--accent-orange)"></div></div><span class="sv-val" style="color:var(--accent-orange)">65</span></div>
-                        </div>
-                        <div class="sv-dot" style="background:var(--accent);box-shadow:0 0 4px rgba(48,209,88,0.5)"></div>
-                    </div>
-                </div>
-                <div class="style-variant" id="sv-monochrome">
-                    <span class="style-variant-label">Monochrome</span>
-                    <div class="style-variant-bar">
-                        <div class="sv-item"><span class="sv-label">CPU</span><div class="sv-bar"><div class="sv-fill" style="width:19%;background:var(--text)"></div></div><span class="sv-val" style="color:var(--text)">19</span></div>
-                        <div class="sv-item"><span class="sv-label">MEM</span><div class="sv-bar"><div class="sv-fill" style="width:42%;background:var(--text)"></div></div><span class="sv-val" style="color:var(--text)">42</span></div>
-                        <div class="sv-item"><span class="sv-label">HD</span><div class="sv-bar"><div class="sv-fill" style="width:65%;background:var(--text)"></div></div><span class="sv-val" style="color:var(--text)">65</span></div>
-                        <div class="sv-dot" style="background:var(--text)"></div>
-                    </div>
-                </div>
-                <div class="style-variant" id="sv-custom">
-                    <span class="style-variant-label">Custom Color</span>
-                    <div class="style-variant-bar">
-                        <div class="sv-item"><span class="sv-label">CPU</span><div class="sv-bar"><div class="sv-fill" style="width:19%;background:var(--accent-cyan)"></div></div><span class="sv-val" style="color:var(--accent-cyan)">19</span></div>
-                        <div class="sv-item"><span class="sv-label">MEM</span><div class="sv-bar"><div class="sv-fill" style="width:42%;background:var(--accent-cyan)"></div></div><span class="sv-val" style="color:var(--accent-cyan)">42</span></div>
-                        <div class="sv-item"><span class="sv-label">HD</span><div class="sv-bar"><div class="sv-fill" style="width:65%;background:var(--accent-cyan)"></div></div><span class="sv-val" style="color:var(--accent-cyan)">65</span></div>
-                        <div class="sv-dot" style="background:var(--accent-cyan);box-shadow:0 0 4px rgba(100,210,255,0.5)"></div>
-                    </div>
-                </div>
-                <div class="style-variant" id="sv-minimal">
-                    <span class="style-variant-label">Bars Only</span>
-                    <div class="style-variant-bar">
-                        <div class="sv-item"><div class="sv-bar"><div class="sv-fill" style="width:19%;background:var(--accent-blue)"></div></div></div>
-                        <div class="sv-item"><div class="sv-bar"><div class="sv-fill" style="width:42%;background:var(--accent)"></div></div></div>
-                        <div class="sv-item"><div class="sv-bar"><div class="sv-fill" style="width:65%;background:var(--accent-orange)"></div></div></div>
-                        <div class="sv-dot" style="background:var(--accent);box-shadow:0 0 4px rgba(48,209,88,0.5)"></div>
-                    </div>
-                </div>
+                <div class="style-label" id="styleLabel">Category Colors</div>
             </div>
 
         </div>
-        <p style="text-align:center;font-size:11px;color:rgba(255,255,255,0.2);margin-top:14px;font-style:italic">This demo is a close approximation. Some differences may be present in the installed native Mac app.</p>
+        <p style="text-align:center;font-size:11px;color:var(--hint-color);margin-top:14px;font-style:italic">Interactive demo — double-click the menu bar to cycle styles. Some differences may be present in the installed native Mac app.</p>
     </div>
 </section>
 
@@ -987,6 +953,11 @@
                 <h3>Customizable</h3>
                 <p>Category colors, monochrome, or custom color via picker. Optional utilization colorization. Two layouts (horizontal/stacked). Toggle individual items and labels. Launch at login.</p>
             </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(100,210,255,0.15)">&#128274;</div>
+                <h3>Private & Secure</h3>
+                <p>Zero telemetry, zero tracking, zero analytics. No server infrastructure — Blip works entirely on-device. Security audited to ensure your data never leaves your Mac.</p>
+            </div>
         </div>
     </div>
 </section>
@@ -1009,7 +980,7 @@
             </details>
             <details class="faq-item">
                 <summary>Is it safe? Why does it need to run unsandboxed?</summary>
-                <p>Blip needs to read hardware sensors (SMC for fans, IOKit for GPU/disk I/O, process list for top apps) which require unsandboxed access. The app is fully open source — you can audit every line of code, and every release is notarized by Apple.</p>
+                <p>Blip needs to read hardware sensors (SMC for fans, IOKit for GPU/disk I/O, process list for top apps) which require unsandboxed access. The app is fully open source — you can audit every line of code, and every release is notarized by Apple. There is no telemetry or tracking of any kind — no analytics, no crash reporters, no network calls home. No server infrastructure is used or needed for Blip to work; everything runs entirely on your Mac. The app has been security audited to ensure the utmost care in being a safe app for use.</p>
             </details>
             <details class="faq-item">
                 <summary>How does the hover detail panel work?</summary>
@@ -1062,12 +1033,14 @@
 
     const panelOrder = ['cpu', 'memory', 'disk', 'network', 'gpu', 'thermal', 'battery'];
     const showcase = document.getElementById('styleShowcase');
-    const styleVariants = ['sv-horizontal', 'sv-stacked', 'sv-monochrome', 'sv-custom', 'sv-minimal'];
+    const styleLabel = document.getElementById('styleLabel');
     let step = 0;
     let autoRunning = true;
     let interactive = false;
     let autoTimeout = null;
     let menubarStyleIdx = 0;
+    let idleTimer = null;
+    const IDLE_TIMEOUT = 6000; // 6s of no interaction triggers auto-play
 
     function moveCursor(x, y) { cursor.style.left = x + 'px'; cursor.style.top = y + 'px'; }
     function showCursor() { cursor.style.opacity = '1'; }
@@ -1096,9 +1069,13 @@
     function showShowcase() { showcase.classList.add('visible'); }
     function hideShowcase() {
         showcase.classList.remove('visible');
-        styleVariants.forEach(id => document.getElementById(id).classList.remove('show'));
+        styleLabel.classList.remove('visible');
     }
-    function revealVariant(id) { document.getElementById(id).classList.add('show'); }
+    function showStyleLabel(text) {
+        styleLabel.textContent = text;
+        styleLabel.classList.add('visible');
+    }
+    function hideStyleLabel() { styleLabel.classList.remove('visible'); }
 
     function getRowCenter(name) {
         const row = popover.querySelector('[data-panel="' + name + '"]');
@@ -1122,6 +1099,36 @@
     function resetAll() {
         hideCursor(); closePopover(); highlightRow(null); showPanel(null);
         hideShowcase(); showMenubar();
+        menubarStyleIdx = 0; applyMenubarStyle(0);
+    }
+
+    // ── Menu bar styles (must be before timeline) ──
+    const mbStyles = [
+        { name:'Category Colors', layout:'row', labels:true, values:true, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
+        { name:'Monochrome', layout:'row', labels:true, values:true, colors:['var(--text)','var(--text)','var(--text)'] },
+        { name:'Custom Color', layout:'row', labels:true, values:true, colors:['var(--accent-cyan)','var(--accent-cyan)','var(--accent-cyan)'] },
+        { name:'Bars + Values', layout:'row', labels:false, values:true, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
+        { name:'Labels + Bars', layout:'row', labels:true, values:false, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
+        { name:'Bars Only', layout:'row', labels:false, values:false, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
+        { name:'Stacked', layout:'col', labels:true, values:true, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
+        { name:'Stacked Compact', layout:'col', labels:true, values:false, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
+        { name:'Stacked Minimal', layout:'col', labels:false, values:false, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
+    ];
+
+    function applyMenubarStyle(idx) {
+        const s = mbStyles[idx];
+        const fills = menubar.querySelectorAll('.mb-fill');
+        const vals = menubar.querySelectorAll('.mb-val');
+        const labels = menubar.querySelectorAll('.mb-label');
+        fills.forEach((f, i) => f.style.background = s.colors[i]);
+        vals.forEach((v, i) => { v.style.color = s.colors[i]; v.style.display = s.values ? '' : 'none'; });
+        labels.forEach(l => l.style.display = s.labels ? '' : 'none');
+        const mbItemsEl = document.getElementById('mbItems');
+        if (s.layout === 'col') {
+            mbItemsEl.classList.add('stacked');
+        } else {
+            mbItemsEl.classList.remove('stacked');
+        }
     }
 
     // ── Auto-play timeline ──
@@ -1152,24 +1159,40 @@
         timeline.push({ delay: 5000, fn: () => {} });
     });
 
-    // Phase 3: Close popover, style showcase
+    // Phase 3: Close popover, cycle styles on the actual menu bar
     timeline.push({ delay: 1000, fn: () => {
         highlightRow(null); showPanel(null); hideCursor();
     }});
     timeline.push({ delay: 800, fn: () => {
-        closePopover(); hideMenubar();
+        closePopover();
     }});
-    timeline.push({ delay: 1200, fn: () => { showShowcase(); }});
+    timeline.push({ delay: 600, fn: () => {
+        showShowcase();
+        menubarStyleIdx = 0;
+        applyMenubarStyle(0);
+        showStyleLabel(mbStyles[0].name);
+    }});
 
-    // Phase 4: Reveal styles
-    styleVariants.forEach((id, i) => {
-        timeline.push({ delay: i === 0 ? 1000 : 1500, fn: () => { revealVariant(id); }});
+    // Phase 4: Cycle through each style on the real menu bar
+    mbStyles.forEach((s, i) => {
+        if (i === 0) return; // already showing first
+        timeline.push({ delay: 2000, fn: () => {
+            hideStyleLabel();
+        }});
+        timeline.push({ delay: 400, fn: () => {
+            menubarStyleIdx = i;
+            applyMenubarStyle(i);
+            showStyleLabel(s.name);
+        }});
     });
-    timeline.push({ delay: 10000, fn: () => {} });
+    timeline.push({ delay: 3000, fn: () => {} });
 
-    // Phase 5: Loop
-    timeline.push({ delay: 800, fn: () => { hideShowcase(); }});
-    timeline.push({ delay: 1000, fn: () => { showMenubar(); }});
+    // Phase 5: Reset and loop
+    timeline.push({ delay: 800, fn: () => {
+        hideShowcase();
+        menubarStyleIdx = 0;
+        applyMenubarStyle(0);
+    }});
     timeline.push({ delay: 3000, fn: () => { step = 0; runStep(); }});
 
     function clearAutoTimer() {
@@ -1218,19 +1241,39 @@
     function exitInteractive() {
         if (!interactive) return;
         interactive = false;
+        if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
         highlightRow(null); showPanel(null);
         closePopover();
         step = 0;
         setTimeout(() => { if (!interactive) runStep(); }, 3000);
     }
 
-    wrapper.addEventListener('mouseenter', enterInteractive);
+    function resetIdleTimer() {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            if (!interactive) return;
+            // User idle — restart auto-play from current state
+            exitInteractive();
+        }, IDLE_TIMEOUT);
+    }
+
+    wrapper.addEventListener('mouseenter', () => {
+        enterInteractive();
+        resetIdleTimer();
+    });
     wrapper.addEventListener('mouseleave', exitInteractive);
+    wrapper.addEventListener('mousemove', () => {
+        if (!interactive) {
+            enterInteractive();
+        }
+        resetIdleTimer();
+    });
 
     // Click menubar to toggle popover
     menubar.addEventListener('click', (e) => {
         if (!interactive) return;
         e.stopPropagation();
+        resetIdleTimer();
         if (isPopoverOpen()) {
             closePopover();
             highlightRow(null);
@@ -1241,38 +1284,10 @@
     });
 
     // Double-click menubar to cycle styles
-    const mbStyles = [
-        { layout:'row', labels:true, values:true, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
-        { layout:'row', labels:true, values:true, colors:['var(--text)','var(--text)','var(--text)'] },
-        { layout:'row', labels:true, values:true, colors:['var(--accent-cyan)','var(--accent-cyan)','var(--accent-cyan)'] },
-        { layout:'row', labels:true, values:false, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
-        { layout:'row', labels:false, values:true, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
-        { layout:'row', labels:false, values:false, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
-        { layout:'col', labels:true, values:true, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
-        { layout:'col', labels:true, values:false, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
-        { layout:'col', labels:false, values:false, colors:['var(--accent-blue)','var(--accent)','var(--accent-orange)'] },
-    ];
-
-    function applyMenubarStyle(idx) {
-        const s = mbStyles[idx];
-        const items = menubar.querySelectorAll('.mb-item');
-        const fills = menubar.querySelectorAll('.mb-fill');
-        const vals = menubar.querySelectorAll('.mb-val');
-        const labels = menubar.querySelectorAll('.mb-label');
-        fills.forEach((f, i) => f.style.background = s.colors[i]);
-        vals.forEach((v, i) => { v.style.color = s.colors[i]; v.style.display = s.values ? '' : 'none'; });
-        labels.forEach(l => l.style.display = s.labels ? '' : 'none');
-        const mbItemsEl = document.getElementById('mbItems');
-        if (s.layout === 'col') {
-            mbItemsEl.classList.add('stacked');
-        } else {
-            mbItemsEl.classList.remove('stacked');
-        }
-    }
-
     menubar.addEventListener('dblclick', (e) => {
         if (!interactive) return;
         e.stopPropagation();
+        resetIdleTimer();
         menubarStyleIdx = (menubarStyleIdx + 1) % mbStyles.length;
         applyMenubarStyle(menubarStyleIdx);
     });
