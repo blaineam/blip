@@ -22,7 +22,7 @@ jobs:
       - name: Generate Xcode Project
         run: xcodegen generate
 
-      - name: Build (Direct Distribution)
+      - name: Build (Direct Distribution - Debug)
         run: |
           xcodebuild -scheme Blip -configuration Debug \
             -derivedDataPath .build/DerivedData \
@@ -32,7 +32,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             -quiet
 
-      - name: Build (App Store)
+      - name: Build (App Store - Debug)
         run: |
           xcodebuild -scheme BlipAppStore -configuration Debug \
             -derivedDataPath .build/DerivedData \
@@ -42,7 +42,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             -quiet
 
-      - name: Build (Helper)
+      - name: Build (Helper - Debug)
         run: |
           xcodebuild -scheme BlipHelper -configuration Debug \
             -derivedDataPath .build/DerivedData \
@@ -94,14 +94,71 @@ jobs:
           echo "Non-system dependencies: $DEPS"
           echo "✓ All QA checks passed"
 
+      # ---- PR Pre-release: signed, notarized DMGs ----
+
+      - name: Import Signing Certificate
+        if: github.event_name == 'pull_request'
+        env:
+          CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "$CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" \
+            -P "$CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
+          echo "IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Build Release (Blip)
+        if: github.event_name == 'pull_request'
+        run: |
+          xcodebuild -scheme Blip -configuration Release \
+            -derivedDataPath .build/ReleaseDerivedData \
+            -arch arm64 \
+            CODE_SIGN_IDENTITY="$IDENTITY" \
+            CODE_SIGN_STYLE=Manual \
+            ENABLE_HARDENED_RUNTIME=YES \
+            OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime" \
+            CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
+            -quiet
+
+      - name: Build Release (BlipHelper)
+        if: github.event_name == 'pull_request'
+        run: |
+          xcodebuild -scheme BlipHelper -configuration Release \
+            -derivedDataPath .build/ReleaseDerivedData \
+            -arch arm64 \
+            CODE_SIGN_IDENTITY="$IDENTITY" \
+            CODE_SIGN_STYLE=Manual \
+            ENABLE_HARDENED_RUNTIME=YES \
+            OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime" \
+            CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
+            -quiet
+
       - name: Generate Brand Assets
         if: github.event_name == 'pull_request'
         run: swift Scripts/generate-assets.swift .build/assets
 
-      - name: Inject App Icon
+      - name: Inject App Icons
         if: github.event_name == 'pull_request'
         run: |
-          APP=".build/DerivedData/Build/Products/Debug/Blip.app"
+          APP=".build/ReleaseDerivedData/Build/Products/Release/Blip.app"
+          HELPER_APP=".build/ReleaseDerivedData/Build/Products/Release/Blip Helper.app"
+
+          # Blip icon
           if [[ -f ".build/assets/Blip.icns" ]]; then
             mkdir -p "$APP/Contents/Resources"
             cp ".build/assets/Blip.icns" "$APP/Contents/Resources/AppIcon.icns"
@@ -109,11 +166,29 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$APP/Contents/Info.plist"
           fi
 
+          # Helper icon
+          if [[ -d "$HELPER_APP" && -f ".build/assets/BlipHelper.icns" ]]; then
+            mkdir -p "$HELPER_APP/Contents/Resources"
+            cp ".build/assets/BlipHelper.icns" "$HELPER_APP/Contents/Resources/AppIcon.icns"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile AppIcon" "$HELPER_APP/Contents/Info.plist" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$HELPER_APP/Contents/Info.plist"
+          fi
+
+      - name: Re-sign After Icon Injection
+        if: github.event_name == 'pull_request'
+        run: |
+          codesign --force --deep --sign "$IDENTITY" --timestamp --options runtime \
+            ".build/ReleaseDerivedData/Build/Products/Release/Blip.app"
+
+          HELPER_APP=".build/ReleaseDerivedData/Build/Products/Release/Blip Helper.app"
+          if [ -d "$HELPER_APP" ]; then
+            codesign --force --deep --sign "$IDENTITY" --timestamp --options runtime "$HELPER_APP"
+          fi
+
       - name: Package Pre-release DMGs
         if: github.event_name == 'pull_request'
         run: |
-          APP=".build/DerivedData/Build/Products/Debug/Blip.app"
-          HELPER=".build/DerivedData/Build/Products/Debug/BlipHelper"
+          APP=".build/ReleaseDerivedData/Build/Products/Release/Blip.app"
           PR_NUM="${{ github.event.pull_request.number }}"
 
           mkdir -p dist
@@ -166,18 +241,11 @@ jobs:
           sleep 2
           hdiutil convert "$DMG_TEMP" -format UDZO -imagekey zlib-level=9 -o "$DMG_FINAL" -ov
           rm -f "$DMG_TEMP"
+          codesign --sign "$IDENTITY" --timestamp "$DMG_FINAL"
 
           # --- Blip Helper.app DMG ---
-          HELPER_APP=".build/DerivedData/Build/Products/Debug/Blip Helper.app"
+          HELPER_APP=".build/ReleaseDerivedData/Build/Products/Release/Blip Helper.app"
           if [ -d "$HELPER_APP" ]; then
-            # Inject icon into helper app
-            if [[ -f ".build/assets/BlipHelper.icns" ]]; then
-              mkdir -p "$HELPER_APP/Contents/Resources"
-              cp ".build/assets/BlipHelper.icns" "$HELPER_APP/Contents/Resources/AppIcon.icns"
-              /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile AppIcon" "$HELPER_APP/Contents/Info.plist" 2>/dev/null || \
-              /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$HELPER_APP/Contents/Info.plist"
-            fi
-
             HELPER_TEMP=".build/helper-pr-temp.dmg"
             HELPER_FINAL="dist/BlipHelper-PR${PR_NUM}.dmg"
 
@@ -225,6 +293,32 @@ jobs:
             sleep 2
             hdiutil convert "$HELPER_TEMP" -format UDZO -imagekey zlib-level=9 -o "$HELPER_FINAL" -ov
             rm -f "$HELPER_TEMP"
+            codesign --sign "$IDENTITY" --timestamp "$HELPER_FINAL"
+          fi
+
+      - name: Notarize Pre-release DMGs
+        if: github.event_name == 'pull_request'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+
+          xcrun notarytool submit "dist/Blip-PR${PR_NUM}.dmg" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --wait
+          xcrun stapler staple "dist/Blip-PR${PR_NUM}.dmg"
+
+          if [ -f "dist/BlipHelper-PR${PR_NUM}.dmg" ]; then
+            xcrun notarytool submit "dist/BlipHelper-PR${PR_NUM}.dmg" \
+              --apple-id "$APPLE_ID" \
+              --team-id "$APPLE_TEAM_ID" \
+              --password "$APPLE_APP_PASSWORD" \
+              --wait
+            xcrun stapler staple "dist/BlipHelper-PR${PR_NUM}.dmg"
           fi
 
       - name: Create Pre-release
@@ -236,9 +330,7 @@ jobs:
           body: |
             Automated pre-release build from PR #${{ github.event.pull_request.number }}.
 
-            **This is an unsigned debug build for testing only — not notarized.**
-
-            To run: open the DMG, right-click Blip.app → Open (bypasses Gatekeeper for unsigned apps).
+            **Signed and notarized** — double-click to install, no Gatekeeper bypass needed.
           prerelease: true
           files: |
             dist/Blip-PR${{ github.event.pull_request.number }}.dmg
