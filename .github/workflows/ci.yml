@@ -19,9 +19,29 @@ jobs:
       - name: Generate Xcode Project
         run: xcodegen generate
 
-      - name: Build
+      - name: Build (Direct Distribution)
         run: |
           xcodebuild -scheme Blip -configuration Debug \
+            -derivedDataPath .build/DerivedData \
+            -arch arm64 \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            -quiet
+
+      - name: Build (App Store)
+        run: |
+          xcodebuild -scheme BlipAppStore -configuration Debug \
+            -derivedDataPath .build/DerivedData \
+            -arch arm64 \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            -quiet
+
+      - name: Build (Helper)
+        run: |
+          xcodebuild -scheme BlipHelper -configuration Debug \
             -derivedDataPath .build/DerivedData \
             -arch arm64 \
             CODE_SIGN_IDENTITY="" \

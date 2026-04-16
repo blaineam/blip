@@ -20,7 +20,7 @@ final class MemoryMonitor: Sendable {
 
         guard result == KERN_SUCCESS else { return stats }
 
-        let pageSize: UInt64 = 16384 // ARM64 page size (Apple Silicon)
+        let pageSize = UInt64(vm_page_size)
 
         stats.wired = UInt64(vmStats.wire_count) * pageSize
         stats.compressed = UInt64(vmStats.compressor_page_count) * pageSize

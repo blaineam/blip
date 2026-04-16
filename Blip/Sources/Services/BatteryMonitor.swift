@@ -43,11 +43,25 @@ final class BatteryMonitor: Sendable {
         return stats
     }
 
+    /// IOKit service names to try for battery health — Apple may rename on future hardware.
+    private static let batteryServiceNames = [
+        "AppleSmartBattery",
+        "AppleSmartBatteryCase",
+    ]
+
+    /// Registry keys for capacity, ordered by preference.
+    private static let capacityKeys = ["NominalChargeCapacity", "AppleRawMaxCapacity", "MaxCapacity"]
+    private static let designCapacityKeys = ["DesignCapacity", "DesignCycleCount9C"]
+
     private func readBatteryHealth(_ stats: inout BatteryStats) async {
-        let service = IOServiceGetMatchingService(
-            kIOMainPortDefault,
-            IOServiceMatching("AppleSmartBattery")
-        )
+        var service: io_service_t = 0
+        for name in Self.batteryServiceNames {
+            service = IOServiceGetMatchingService(
+                kIOMainPortDefault,
+                IOServiceMatching(name)
+            )
+            if service != 0 { break }
+        }
         guard service != 0 else { return }
         defer { IOObjectRelease(service) }
 
@@ -61,16 +75,15 @@ final class BatteryMonitor: Sendable {
             stats.cycleCount = cycleCount
         }
 
-        // Use NominalChargeCapacity for health — matches macOS Settings app
-        // NominalChargeCapacity accounts for calibration, AppleRawMaxCapacity does not
-        if let nominalCapacity = dict["NominalChargeCapacity"] as? Int,
-           let designCapacity = dict["DesignCapacity"] as? Int,
-           designCapacity > 0 {
-            stats.health = Double(nominalCapacity) / Double(designCapacity) * 100
-        } else if let rawMax = dict["AppleRawMaxCapacity"] as? Int,
-                  let designCapacity = dict["DesignCapacity"] as? Int,
-                  designCapacity > 0 {
-            stats.health = Double(rawMax) / Double(designCapacity) * 100
+        // Try capacity keys in preference order
+        let currentCap = Self.capacityKeys.lazy.compactMap { dict[$0] as? Int }.first
+        let designCap = Self.designCapacityKeys.lazy.compactMap { dict[$0] as? Int }.first
+        if let current = currentCap, let design = designCap, design > 0 {
+            let health = Double(current) / Double(design) * 100
+            // Sanity check: health should be 0-200% range
+            if health > 0 && health < 200 {
+                stats.health = health
+            }
         }
 
         // Battery condition (Normal, Service, etc.)
@@ -81,7 +94,11 @@ final class BatteryMonitor: Sendable {
         }
 
         if let temp = dict["Temperature"] as? Int {
-            stats.temperature = Double(temp) / 100.0 // centi-degrees to degrees
+            let celsius = Double(temp) / 100.0
+            // Sanity: battery temp should be -20 to 80 C
+            if celsius > -20 && celsius < 80 {
+                stats.temperature = celsius
+            }
         }
     }
 }

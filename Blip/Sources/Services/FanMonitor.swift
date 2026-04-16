@@ -11,14 +11,20 @@ final class FanMonitor: Sendable {
             stats.gpuTemperature = SMC.readGPUTemperature()
 
             let fanCount = SMC.readFanCount()
+            // Sanity: fan count should be 0-10
+            guard fanCount >= 0 && fanCount <= 10 else { return stats }
             for i in 0..<fanCount {
                 let rpm = SMC.readFanRPM(fan: i)
+                let minRPM = SMC.readFanMin(fan: i)
+                let maxRPM = SMC.readFanMax(fan: i)
+                // Validate: RPM should be in a reasonable range
+                let validRPM = (rpm >= 0 && rpm <= 10_000) ? rpm : 0
                 let fan = FanInfo(
                     id: i,
                     name: "Fan \(i + 1)",
-                    currentRPM: rpm,
-                    minRPM: SMC.readFanMin(fan: i),
-                    maxRPM: SMC.readFanMax(fan: i)
+                    currentRPM: validRPM,
+                    minRPM: (minRPM >= 0 && minRPM <= 10_000) ? minRPM : 0,
+                    maxRPM: (maxRPM >= 0 && maxRPM <= 10_000) ? maxRPM : 6000
                 )
                 stats.fans.append(fan)
             }

@@ -14,11 +14,14 @@ settings:
     CODE_SIGN_STYLE: Manual
     SWIFT_STRICT_CONCURRENCY: complete
 targets:
+
+  # ---------- Main App (Direct Distribution) ----------
   Blip:
     type: application
     platform: macOS
     sources:
       - path: Blip/Sources
+      - path: Shared
       - path: Blip/Resources/Assets.xcassets
         type: folder
         buildPhase: resources
@@ -34,3 +37,70 @@ targets:
         COMBINE_HIDPI_IMAGES: YES
     frameworks:
       - sdk: IOKit.framework
+
+  # ---------- Main App (Mac App Store) ----------
+  BlipAppStore:
+    type: application
+    platform: macOS
+    sources:
+      - path: Blip/Sources
+      - path: Shared
+      - path: Blip/Resources/Assets.xcassets
+        type: folder
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.blainemiller.Blip
+        INFOPLIST_FILE: Blip/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Blip/Resources/BlipAppStore.entitlements
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Distribution"
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
+        PRODUCT_NAME: Blip
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+        COMBINE_HIDPI_IMAGES: YES
+    frameworks:
+      - sdk: IOKit.framework
+
+  # ---------- Helper Tool (Direct Distribution, unsandboxed) ----------
+  BlipHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: BlipHelper/Sources
+      - path: Shared
+      - path: Blip/Sources/Services/SMCKit.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.blainemiller.BlipHelper
+        INFOPLIST_FILE: BlipHelper/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: BlipHelper/Resources/BlipHelper.entitlements
+        PRODUCT_NAME: BlipHelper
+        GENERATE_INFOPLIST_FILE: NO
+    frameworks:
+      - sdk: IOKit.framework
+
+schemes:
+  Blip:
+    build:
+      targets:
+        Blip: all
+    run:
+      config: Debug
+
+  BlipAppStore:
+    build:
+      targets:
+        BlipAppStore: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+
+  BlipHelper:
+    build:
+      targets:
+        BlipHelper: all
+    run:
+      config: Debug

@@ -8,7 +8,7 @@ struct BlipApp: App {
 
     var body: some Scene {
         Settings {
-            SettingsView()
+            SettingsView(helperClient: nil)
         }
     }
 }
@@ -265,7 +265,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let settingsView = SettingsView()
+        let settingsView = SettingsView(helperClient: monitor.helperClient)
         let hostingController = NSHostingController(rootView: settingsView)
 
         let window = NSWindow(contentViewController: hostingController)

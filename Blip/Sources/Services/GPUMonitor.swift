@@ -40,6 +40,13 @@ final class GPUMonitor: Sendable {
         gpuCoreCount = cores
     }
 
+    /// Known IOKit utilization key names — Apple may add new ones on future hardware.
+    private static let utilizationKeys = [
+        "Device Utilization %",
+        "GPU Activity(%)",
+        "GPU Core Utilization %",
+    ]
+
     func read() -> GPUStats {
         var stats = GPUStats()
         stats.name = gpuName
@@ -47,8 +54,8 @@ final class GPUMonitor: Sendable {
 
         // Only poll utilization — the dynamic value
         var iterator: io_iterator_t = 0
-        let matching = IOServiceMatching("IOAccelerator")
-        guard IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iterator) == kIOReturnSuccess else {
+        guard let matching = IOServiceMatching("IOAccelerator"),
+              IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iterator) == kIOReturnSuccess else {
             return stats
         }
         defer { IOObjectRelease(iterator) }
@@ -67,10 +74,12 @@ final class GPUMonitor: Sendable {
                 continue
             }
 
-            if let utilization = perfStats["Device Utilization %"] as? NSNumber {
-                stats.utilization = utilization.doubleValue
-            } else if let gpuActivity = perfStats["GPU Activity(%)"] as? NSNumber {
-                stats.utilization = gpuActivity.doubleValue
+            // Try known utilization keys — future hardware may use a new name
+            for key in Self.utilizationKeys {
+                if let value = perfStats[key] as? NSNumber {
+                    stats.utilization = value.doubleValue
+                    break
+                }
             }
         }
 

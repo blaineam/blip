@@ -14,6 +14,8 @@ struct SettingsView: View {
     @AppStorage("pingTarget") private var pingTarget: String = "1.1.1.1"
     @AppStorage("colorizeUtilization") private var colorizeUtilization = true
 
+    var helperClient: HelperClient?
+
     @State private var selectedTab: Int = 2
     @State private var selectedMode: ColorMode = .category
     @State private var customColor: Color = .blue
@@ -84,6 +86,25 @@ struct SettingsView: View {
                         .font(.system(size: 12, design: .monospaced))
                         .lineLimit(1)
                         .truncationMode(.tail)
+                }
+            }
+
+            if let helperClient {
+                Section("Blip Helper") {
+                    LabeledContent("Status") {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(helperClient.isConnected ? Color.green : Color.secondary.opacity(0.4))
+                                .frame(width: 7, height: 7)
+                            Text(helperClient.isConnected ? "Connected" : helperClient.isHelperInstalled ? "Not Running" : "Not Installed")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    if !helperClient.isConnected {
+                        Text("Install Blip Helper for fan speeds, temperatures, GPU utilization, disk I/O, battery health, and process monitoring.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 

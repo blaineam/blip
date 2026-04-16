@@ -60,6 +60,9 @@ enum SMC {
     private static let typeUI16 = fourCharCode("ui16")
     private static let typeUI32 = fourCharCode("ui32")
 
+    /// Whether the SMC connection has been validated with a known-good read.
+    nonisolated(unsafe) private static var isValidated = false
+
     static func open() -> Bool {
         guard !isOpen else { return true }
         for serviceName in ["AppleSMC", "AppleARMSMC", "AppleSMCKeysEndpoint"] {
@@ -72,11 +75,22 @@ enum SMC {
             IOObjectRelease(service)
             if result == kIOReturnSuccess {
                 isOpen = true
+                // Self-test: read fan count key to validate the connection
+                if !isValidated {
+                    if readKeyWithType("FNum") != nil {
+                        isValidated = true
+                    }
+                    // Even if self-test fails, keep connection open —
+                    // some keys may still work on this hardware
+                }
                 return true
             }
         }
         return false
     }
+
+    /// Returns true if the SMC connection passed its self-test.
+    static var available: Bool { isOpen && isValidated }
 
     static func close() {
         guard isOpen else { return }

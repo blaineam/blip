@@ -88,12 +88,23 @@ final class DiskMonitor: @unchecked Sendable {
         return ""
     }
 
+    /// IOKit class names for disk I/O — Apple may change on future storage controllers.
+    private static let diskIOServiceNames = [
+        "IOBlockStorageDriver",
+        "IONVMeBlockStorageDriver",
+    ]
+
     private func readDiskIO(_ stats: inout DiskStats) {
         var iterator: io_iterator_t = 0
-        let matching = IOServiceMatching("IOBlockStorageDriver")
-        guard IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iterator) == kIOReturnSuccess else {
-            return
+        var matched = false
+        for serviceName in Self.diskIOServiceNames {
+            guard let matching = IOServiceMatching(serviceName) else { continue }
+            if IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iterator) == kIOReturnSuccess {
+                matched = true
+                break
+            }
         }
+        guard matched else { return }
         defer { IOObjectRelease(iterator) }
 
         var totalRead: UInt64 = 0

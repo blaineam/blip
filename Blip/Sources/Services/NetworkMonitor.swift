@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import SystemConfiguration
+import Darwin
 
 final class NetworkMonitor: @unchecked Sendable {
     private let pathMonitor = NWPathMonitor()
@@ -189,8 +190,72 @@ final class NetworkMonitor: @unchecked Sendable {
         return stats
     }
 
-    /// Reads the default gateway (router) IP from the routing table
+    /// Reads the default gateway IP via sysctl routing table (no subprocess needed).
+    /// Falls back to netstat if the sysctl approach fails.
     private static func readDefaultGateway() -> String {
+        // Try sysctl route lookup first — no subprocess, sandbox-friendly
+        if let gw = readGatewayViaSysctl() { return gw }
+        // Fallback to netstat (works outside sandbox)
+        return readGatewayViaNetstat()
+    }
+
+    /// Parse the routing table via sysctl NET_RT_FLAGS to find the default gateway.
+    private static func readGatewayViaSysctl() -> String? {
+        var mib: [Int32] = [CTL_NET, AF_ROUTE, 0, AF_INET, NET_RT_FLAGS, RTF_GATEWAY]
+        var bufferSize = 0
+        guard sysctl(&mib, UInt32(mib.count), nil, &bufferSize, nil, 0) == 0, bufferSize > 0 else {
+            return nil
+        }
+        var buffer = [UInt8](repeating: 0, count: bufferSize)
+        guard sysctl(&mib, UInt32(mib.count), &buffer, &bufferSize, nil, 0) == 0 else {
+            return nil
+        }
+
+        var offset = 0
+        while offset < bufferSize {
+            let rtm = buffer.withUnsafeBufferPointer { ptr -> rt_msghdr in
+                ptr.baseAddress!.advanced(by: offset)
+                    .withMemoryRebound(to: rt_msghdr.self, capacity: 1) { $0.pointee }
+            }
+            let msgLen = Int(rtm.rtm_msglen)
+            guard msgLen > 0 else { break }
+
+            // Look for default route (destination 0.0.0.0)
+            if rtm.rtm_flags & RTF_GATEWAY != 0 {
+                let saStart = offset + MemoryLayout<rt_msghdr>.size
+                // First sockaddr is destination, second is gateway
+                if rtm.rtm_addrs & RTA_DST != 0 && rtm.rtm_addrs & RTA_GATEWAY != 0 {
+                    let dst = buffer.withUnsafeBufferPointer { ptr -> sockaddr_in in
+                        ptr.baseAddress!.advanced(by: saStart)
+                            .withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee }
+                    }
+                    // Default route has destination 0.0.0.0
+                    if dst.sin_addr.s_addr == 0 {
+                        let gwOffset = saStart + Int(max(dst.sin_len, UInt8(MemoryLayout<sockaddr_in>.size)))
+                        // Align to 4-byte boundary
+                        let alignedGwOffset = (gwOffset + 3) & ~3
+                        if alignedGwOffset + MemoryLayout<sockaddr_in>.size <= bufferSize {
+                            let gw = buffer.withUnsafeBufferPointer { ptr -> sockaddr_in in
+                                ptr.baseAddress!.advanced(by: alignedGwOffset)
+                                    .withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee }
+                            }
+                            if gw.sin_family == UInt8(AF_INET) {
+                                var addr = gw.sin_addr
+                                if let cStr = inet_ntoa(addr) {
+                                    return String(cString: cStr)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            offset += msgLen
+        }
+        return nil
+    }
+
+    /// Fallback: reads the default gateway via netstat subprocess.
+    private static func readGatewayViaNetstat() -> String {
         let task = Foundation.Process()
         let pipe = Pipe()
         task.executableURL = URL(fileURLWithPath: "/usr/sbin/netstat")
@@ -199,10 +264,9 @@ final class NetworkMonitor: @unchecked Sendable {
         task.standardError = FileHandle.nullDevice
         do {
             try task.run()
-            task.waitUntilExit()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
             let output = String(data: data, encoding: .utf8) ?? ""
-            // Find the default route line
             for line in output.components(separatedBy: "\n") {
                 let parts = line.split(separator: " ", omittingEmptySubsequences: true)
                 if parts.count >= 2 && parts[0] == "default" {

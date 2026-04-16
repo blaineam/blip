@@ -6,6 +6,10 @@ import SwiftUI
 
 /// Central coordinator that polls all hardware monitors on a timer
 /// and publishes unified snapshots for the UI layer.
+///
+/// For privileged data (SMC, IOKit, proc_*), the in-process monitors
+/// are tried first. If they return empty results (e.g. when sandboxed),
+/// the HelperClient fills in the gaps from BlipHelper over TCP.
 @MainActor
 final class SystemMonitor: ObservableObject {
     @Published var snapshot = SystemSnapshot()
@@ -25,6 +29,9 @@ final class SystemMonitor: ObservableObject {
     private let batteryMonitor = BatteryMonitor()
     private let fanMonitor = FanMonitor()
     private let processMonitor = ProcessMonitor()
+
+    /// Helper client for privileged data when running sandboxed.
+    let helperClient = HelperClient()
 
     private var pollTask: Task<Void, Never>?
     private var diskPollCount = 0
@@ -67,21 +74,74 @@ final class SystemMonitor: ObservableObject {
         async let fanRead = fanMonitor.read()
         async let procRead = Task.detached { [processMonitor] in await processMonitor.read() }.value
 
+        // Also poll the helper (no-op if helper isn't running)
+        await helperClient.poll()
+        let helper = helperClient.latestSnapshot
+
         let cpu = await cpuRead
         let memory = await memRead
         let network = await netRead
-        let gpu = await gpuRead
-        let battery = await battRead
-        let fans = await fanRead
+        var gpu = await gpuRead
+        var battery = await battRead
+        var fans = await fanRead
         let procs = await procRead
 
         // Disk is slow — poll every 5th cycle (10 seconds)
         diskPollCount += 1
-        let disk: DiskStats
+        var disk: DiskStats
         if diskPollCount % 5 == 1 {
             disk = await Task.detached { [diskMonitor] in diskMonitor.read() }.value
         } else {
             disk = snapshot.disk
+        }
+
+        // Merge helper data for privileged metrics.
+        // In-process monitors succeed when unsandboxed; when sandboxed they
+        // return empty/zero and the helper fills in the gaps.
+        var topByCPU = procs.byCPU
+        var topByMemory = procs.byMemory
+
+        if let h = helper {
+            // Fans/thermal: use helper if in-process SMC returned nothing
+            if fans.fans.isEmpty && !h.fans.isEmpty {
+                fans.fans = h.fans.map { FanInfo(id: $0.id, name: $0.name, currentRPM: $0.currentRPM, minRPM: $0.minRPM, maxRPM: $0.maxRPM) }
+            }
+            if fans.cpuTemperature == nil { fans.cpuTemperature = h.cpuTemperature }
+            if fans.gpuTemperature == nil { fans.gpuTemperature = h.gpuTemperature }
+
+            // GPU utilization: use helper if in-process IOKit returned 0
+            if gpu.utilization == 0 && h.gpuUtilization > 0 {
+                gpu.utilization = h.gpuUtilization
+            }
+
+            // Disk I/O: use helper if in-process returned 0
+            if disk.readBytesPerSec == 0 && disk.writeBytesPerSec == 0 {
+                disk.readBytesPerSec = h.diskReadBytesPerSec
+                disk.writeBytesPerSec = h.diskWriteBytesPerSec
+                disk.totalBytesRead = h.diskTotalBytesRead
+                disk.totalBytesWritten = h.diskTotalBytesWritten
+            }
+            if disk.smartStatus.isEmpty && !h.smartStatus.isEmpty {
+                disk.smartStatus = h.smartStatus
+            }
+
+            // Battery health: use helper if in-process returned defaults
+            if battery.health == 0 { battery.health = h.batteryHealth ?? 0 }
+            if battery.cycleCount == 0 { battery.cycleCount = h.batteryCycleCount ?? 0 }
+            if battery.condition.isEmpty { battery.condition = h.batteryCondition ?? "" }
+            if battery.temperature == 0 { battery.temperature = h.batteryTemperature ?? 0 }
+
+            // Processes: use helper if in-process proc_* returned empty
+            if topByCPU.isEmpty && !h.topProcessesByCPU.isEmpty {
+                topByCPU = h.topProcessesByCPU.map {
+                    ProcessInfo(id: $0.pid, name: $0.name, cpu: $0.cpu, memory: $0.memory, icon: nil)
+                }
+            }
+            if topByMemory.isEmpty && !h.topProcessesByMemory.isEmpty {
+                topByMemory = h.topProcessesByMemory.map {
+                    ProcessInfo(id: $0.pid, name: $0.name, cpu: $0.cpu, memory: $0.memory, icon: nil)
+                }
+            }
         }
 
         // System info (uptime, thermal, self-usage)
@@ -96,8 +156,8 @@ final class SystemMonitor: ObservableObject {
         newSnapshot.battery = battery
         newSnapshot.fans = fans
         newSnapshot.system = sysInfo
-        newSnapshot.topProcessesByCPU = procs.byCPU
-        newSnapshot.topProcessesByMemory = procs.byMemory
+        newSnapshot.topProcessesByCPU = topByCPU
+        newSnapshot.topProcessesByMemory = topByMemory
         newSnapshot.timestamp = Date()
 
         snapshot = newSnapshot
