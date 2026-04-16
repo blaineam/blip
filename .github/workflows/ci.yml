@@ -14,7 +14,7 @@ jobs:
     name: Build & QA
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -323,7 +323,7 @@ jobs:
 
       - name: Create Pre-release
         if: github.event_name == 'pull_request'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: pr-${{ github.event.pull_request.number }}
           name: "PR #${{ github.event.pull_request.number }} — ${{ github.event.pull_request.title }}"
