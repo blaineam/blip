@@ -94,21 +94,49 @@ jobs:
           echo "Non-system dependencies: $DEPS"
           echo "✓ All QA checks passed"
 
-      - name: Package Pre-release App
+      - name: Package Pre-release DMGs
         if: github.event_name == 'pull_request'
         run: |
           APP=".build/DerivedData/Build/Products/Debug/Blip.app"
           HELPER=".build/DerivedData/Build/Products/Debug/BlipHelper"
+          PR_NUM="${{ github.event.pull_request.number }}"
 
           mkdir -p dist
 
-          # Blip.app into a zip (unsigned debug build — for testing only)
-          ditto -c -k --keepParent "$APP" dist/Blip-PR${{ github.event.pull_request.number }}.zip
+          # --- Blip.app DMG ---
+          DMG_TEMP=".build/blip-pr-temp.dmg"
+          DMG_FINAL="dist/Blip-PR${PR_NUM}.dmg"
 
-          # BlipHelper alongside
+          hdiutil create -size 50m -fs HFS+ -volname "Blip" -ov "$DMG_TEMP"
+          MOUNT_POINT=$(hdiutil attach "$DMG_TEMP" -readwrite -noverify -noautoopen | grep "Blip" | awk '{print $NF}' | head -1)
+          if [[ -z "$MOUNT_POINT" ]]; then MOUNT_POINT="/Volumes/Blip"; fi
+
+          cp -R "$APP" "$MOUNT_POINT/"
+          ln -s /Applications "$MOUNT_POINT/Applications"
+
+          sync
+          hdiutil detach "$MOUNT_POINT" -force 2>/dev/null || true
+          sleep 1
+          hdiutil convert "$DMG_TEMP" -format UDZO -imagekey zlib-level=9 -o "$DMG_FINAL" -ov
+          rm -f "$DMG_TEMP"
+
+          # --- BlipHelper DMG ---
           if [ -f "$HELPER" ]; then
-            cp "$HELPER" dist/BlipHelper
-            cd dist && zip BlipHelper-PR${{ github.event.pull_request.number }}.zip BlipHelper && rm BlipHelper && cd ..
+            HELPER_TEMP=".build/helper-pr-temp.dmg"
+            HELPER_FINAL="dist/BlipHelper-PR${PR_NUM}.dmg"
+
+            hdiutil create -size 10m -fs HFS+ -volname "BlipHelper" -ov "$HELPER_TEMP"
+            MOUNT_POINT=$(hdiutil attach "$HELPER_TEMP" -readwrite -noverify -noautoopen | grep "BlipHelper" | awk '{print $NF}' | head -1)
+            if [[ -z "$MOUNT_POINT" ]]; then MOUNT_POINT="/Volumes/BlipHelper"; fi
+
+            cp "$HELPER" "$MOUNT_POINT/"
+            cp "BlipHelper/Resources/com.blainemiller.BlipHelper.plist" "$MOUNT_POINT/"
+
+            sync
+            hdiutil detach "$MOUNT_POINT" -force 2>/dev/null || true
+            sleep 1
+            hdiutil convert "$HELPER_TEMP" -format UDZO -imagekey zlib-level=9 -o "$HELPER_FINAL" -ov
+            rm -f "$HELPER_TEMP"
           fi
 
       - name: Create Pre-release
@@ -122,8 +150,8 @@ jobs:
 
             **This is an unsigned debug build for testing only — not notarized.**
 
-            To run: unzip, right-click Blip.app → Open (bypasses Gatekeeper for unsigned apps).
+            To run: open the DMG, right-click Blip.app → Open (bypasses Gatekeeper for unsigned apps).
           prerelease: true
           files: |
-            dist/Blip-PR${{ github.event.pull_request.number }}.zip
-            dist/BlipHelper-PR${{ github.event.pull_request.number }}.zip
+            dist/Blip-PR${{ github.event.pull_request.number }}.dmg
+            dist/BlipHelper-PR${{ github.event.pull_request.number }}.dmg

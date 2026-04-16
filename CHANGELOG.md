@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### CI/CD
+- **DMG pre-releases** — PR pre-release builds now package as DMGs instead of zips, consistent with the release pipeline
+
 ## v1.3.0
 
 ### Memory Optimization
