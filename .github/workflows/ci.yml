@@ -189,26 +189,26 @@ jobs:
             fi
 
             osascript <<'APPLESCRIPT'
-            tell application "Finder"
-              tell disk "Blip Helper"
-                open
-                set current view of container window to icon view
-                set toolbar visible of container window to false
-                set statusbar visible of container window to false
-                set the bounds of container window to {100, 100, 760, 500}
-                set theViewOptions to icon view options of container window
-                set arrangement of theViewOptions to not arranged
-                set icon size of theViewOptions to 100
-                try
-                  set background picture of theViewOptions to file ".background:background.jpg"
-                end try
-                set position of item "Blip Helper.app" of container window to {145, 185}
-                set position of item "Applications" of container window to {515, 185}
-                update without registering applications
-                close
-              end tell
+          tell application "Finder"
+            tell disk "Blip Helper"
+              open
+              set current view of container window to icon view
+              set toolbar visible of container window to false
+              set statusbar visible of container window to false
+              set the bounds of container window to {100, 100, 760, 500}
+              set theViewOptions to icon view options of container window
+              set arrangement of theViewOptions to not arranged
+              set icon size of theViewOptions to 100
+              try
+                set background picture of theViewOptions to file ".background:background.jpg"
+              end try
+              set position of item "Blip Helper.app" of container window to {145, 185}
+              set position of item "Applications" of container window to {515, 185}
+              update without registering applications
+              close
             end tell
-            APPLESCRIPT
+          end tell
+          APPLESCRIPT
 
             sync
             hdiutil detach "$MOUNT_POINT" -force 2>/dev/null || true
