@@ -244,7 +244,7 @@ final class NetworkMonitor: @unchecked Sendable {
                                     .withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee }
                             }
                             if gw.sin_family == UInt8(AF_INET) {
-                                var addr = gw.sin_addr
+                                let addr = gw.sin_addr
                                 if let cStr = inet_ntoa(addr) {
                                     return String(cString: cStr)
                                 }

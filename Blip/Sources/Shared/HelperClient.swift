@@ -2,49 +2,106 @@ import Foundation
 import Network
 
 /// TCP client that connects to BlipHelper to fetch privileged system data.
-/// Used by the sandboxed MAS version; the direct-download version can
-/// also use it as a fallback if in-process monitors fail.
-@MainActor
-final class HelperClient: ObservableObject {
-    @Published private(set) var isConnected = false
-    @Published private(set) var latestSnapshot: HelperSnapshot?
-
+/// Used by the sandboxed MAS version; the direct-download version skips
+/// this entirely (isSandboxed check in SystemMonitor).
+///
+/// Networking runs on a dedicated dispatch queue. Results are published
+/// on @MainActor via the async poll() entry point.
+final class HelperClient: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.blainemiller.Blip.helperClient")
+    private var _isConnected = false
+    private var _latestSnapshot: HelperSnapshot?
     private var helperPort: UInt16?
 
-    /// Attempt to read the helper's port file and fetch a snapshot.
-    func poll() async {
-        // Discover port if not yet known or if connection failed last time
-        if helperPort == nil {
-            helperPort = readPortFile()
-        }
-        guard let port = helperPort else {
-            await MainActor.run {
-                isConnected = false
-                latestSnapshot = nil
-            }
-            return
-        }
-
-        let snapshot = await fetchSnapshot(port: port)
-        await MainActor.run {
-            if let snapshot {
-                isConnected = true
-                latestSnapshot = snapshot
-            } else {
-                // Port may be stale — re-read on next poll
-                isConnected = false
-                helperPort = nil
-            }
-        }
-    }
+    @MainActor var isConnected: Bool { _isConnected }
+    @MainActor var latestSnapshot: HelperSnapshot? { _latestSnapshot }
 
     /// Check if the helper appears to be installed.
     var isHelperInstalled: Bool {
         FileManager.default.fileExists(atPath: HelperConstants.portFileURL.path)
     }
 
-    // MARK: - Port Discovery
+    /// Attempt to read the helper's port file and fetch a snapshot.
+    func poll() async {
+        let snapshot = await withCheckedContinuation { (continuation: CheckedContinuation<HelperSnapshot?, Never>) in
+            queue.async { [self] in
+                let result = self.fetchSnapshotSync()
+                continuation.resume(returning: result)
+            }
+        }
+        await MainActor.run {
+            if let snapshot {
+                _isConnected = true
+                _latestSnapshot = snapshot
+            } else {
+                _isConnected = false
+                helperPort = nil
+            }
+        }
+    }
+
+    // MARK: - Synchronous TCP (runs on background queue)
+
+    private func fetchSnapshotSync() -> HelperSnapshot? {
+        // Discover port
+        if helperPort == nil {
+            helperPort = readPortFile()
+        }
+        guard let port = helperPort else { return nil }
+
+        // Open TCP socket to localhost
+        let sock = socket(AF_INET, SOCK_STREAM, 0)
+        guard sock >= 0 else { return nil }
+        defer { close(sock) }
+
+        // 3 second timeout for send and receive
+        var tv = timeval(tv_sec: 3, tv_usec: 0)
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = port.bigEndian
+        addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+
+        let connectResult = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                connect(sock, sockPtr, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        guard connectResult == 0 else { return nil }
+
+        // Send request
+        let request = HelperRequest(type: "poll", token: TOTP.generate())
+        guard let frame = try? MessageFraming.encode(request) else { return nil }
+        let sent = frame.withUnsafeBytes { ptr in
+            send(sock, ptr.baseAddress!, ptr.count, 0)
+        }
+        guard sent == frame.count else { return nil }
+
+        // Read 4-byte length header
+        var headerBuf = [UInt8](repeating: 0, count: 4)
+        let headerRead = recv(sock, &headerBuf, 4, MSG_WAITALL)
+        guard headerRead == 4 else { return nil }
+
+        let length = MessageFraming.decodeLength(from: Data(headerBuf))
+        guard let length, length > 0, length < 1_048_576 else { return nil }
+
+        // Read response body
+        var bodyBuf = [UInt8](repeating: 0, count: Int(length))
+        let bodyRead = recv(sock, &bodyBuf, Int(length), MSG_WAITALL)
+        guard bodyRead == Int(length) else { return nil }
+
+        // Decode
+        let bodyData = Data(bodyBuf)
+        guard let response = try? JSONDecoder().decode(HelperResponse.self, from: bodyData),
+              response.type == "snapshot",
+              let token = response.token,
+              TOTP.validate(token) else {
+            return nil
+        }
+        return response.data
+    }
 
     private func readPortFile() -> UInt16? {
         guard let contents = try? String(contentsOf: HelperConstants.portFileURL, encoding: .utf8),
@@ -53,90 +110,5 @@ final class HelperClient: ObservableObject {
             return nil
         }
         return port
-    }
-
-    // MARK: - TCP Request
-
-    private func fetchSnapshot(port: UInt16) async -> HelperSnapshot? {
-        await withCheckedContinuation { continuation in
-            let connection = NWConnection(
-                host: .ipv4(.loopback),
-                port: NWEndpoint.Port(rawValue: port)!,
-                using: .tcp
-            )
-
-            var didResume = false
-
-            connection.stateUpdateHandler = { state in
-                switch state {
-                case .ready:
-                    self.sendRequest(on: connection) { snapshot in
-                        if !didResume {
-                            didResume = true
-                            continuation.resume(returning: snapshot)
-                        }
-                        connection.cancel()
-                    }
-                case .failed, .cancelled:
-                    if !didResume {
-                        didResume = true
-                        continuation.resume(returning: nil)
-                    }
-                default:
-                    break
-                }
-            }
-
-            connection.start(queue: queue)
-
-            // Timeout after 3 seconds
-            queue.asyncAfter(deadline: .now() + 3) {
-                if !didResume {
-                    didResume = true
-                    continuation.resume(returning: nil)
-                    connection.cancel()
-                }
-            }
-        }
-    }
-
-    private func sendRequest(on connection: NWConnection, completion: @escaping (HelperSnapshot?) -> Void) {
-        let request = HelperRequest(type: "poll", token: TOTP.generate())
-        guard let frame = try? MessageFraming.encode(request) else {
-            completion(nil)
-            return
-        }
-
-        connection.send(content: frame, completion: .contentProcessed { error in
-            guard error == nil else {
-                completion(nil)
-                return
-            }
-            self.receiveResponse(on: connection, completion: completion)
-        })
-    }
-
-    private func receiveResponse(on connection: NWConnection, completion: @escaping (HelperSnapshot?) -> Void) {
-        // Read 4-byte length header
-        connection.receive(minimumIncompleteLength: 4, maximumLength: 4) { data, _, _, error in
-            guard let data, data.count == 4,
-                  let length = MessageFraming.decodeLength(from: data),
-                  length > 0, length < 1_048_576 else {
-                completion(nil)
-                return
-            }
-            // Read response body
-            connection.receive(minimumIncompleteLength: Int(length), maximumLength: Int(length)) { bodyData, _, _, error in
-                guard let bodyData,
-                      let response = try? JSONDecoder().decode(HelperResponse.self, from: bodyData),
-                      response.type == "snapshot",
-                      let token = response.token,
-                      TOTP.validate(token) else {
-                    completion(nil)
-                    return
-                }
-                completion(response.data)
-            }
-        }
     }
 }
