@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.4.1
+
+### Settings
+- **Helper section is MAS-only** — the "Blip Helper" settings section (status indicator and download link) now compiles only into the Mac App Store build via `#if APPSTORE`, so the direct-distribution build no longer shows it (the direct build already bundles helper features natively)
+
+### Docs / Site
+- **Top "Download" button links to the Mac App Store** — primary hero CTA now points to Blip Stats on the MAS instead of GitHub Releases
+- **Direct DMG links** — the bottom DMG buttons now download the latest `Blip.dmg` and `BlipHelper.dmg` directly from GitHub Releases, no release-page navigation required
+- **"Free" wording removed from the CTA** — pricing nuance is covered in the FAQ rather than the download button
+
 ## v1.4.0
 
 ### Mac App Store

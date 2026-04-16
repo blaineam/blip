@@ -47,7 +47,7 @@ Blip is available on the Mac App Store as **Blip Stats** for $2.99.
 
 [![Download on the Mac App Store](https://toolbox.marketingtools.apple.com/api/badges/download-on-the-mac-app-store/black/en-us)](https://apps.apple.com/us/app/blip-stats/id6762329495)
 
-Some advanced features (fan speeds, temperatures, GPU utilization, disk I/O, top processes) require the free [Blip Helper](https://github.com/blaineam/blip/releases/latest) companion app.
+Some advanced features (fan speeds, temperatures, GPU utilization, disk I/O, top processes) require the free [Blip Helper](https://github.com/blaineam/blip/releases/latest/download/BlipHelper.dmg) companion app.
 
 ### Homebrew (Recommended for Direct Download)
 
@@ -57,7 +57,7 @@ brew install --cask blaineam/tap/blip
 
 ### Download DMG
 
-Grab the latest notarized `.dmg` from [**Releases**](https://github.com/blaineam/blip/releases/latest). Open it, drag Blip to Applications, done.
+Grab the latest notarized [**Blip.dmg**](https://github.com/blaineam/blip/releases/latest/download/Blip.dmg) (or [**BlipHelper.dmg**](https://github.com/blaineam/blip/releases/latest/download/BlipHelper.dmg) for the companion helper). Open it, drag to Applications, done.
 
 ### Build from Source
 
@@ -101,7 +101,7 @@ chmod +x Scripts/build-dmg.sh
                   |                      |         | Charts |
                   |  MacBook Pro (M4)    |         +--------+
                   |  Up 3d 2h | Nominal  |
-                  |  Blip v1.4.0         |
+                  |  Blip v1.4.1         |
                   +----------------------+
 ```
 

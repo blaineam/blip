@@ -95,6 +95,7 @@ struct SettingsView: View {
                 }
             }
 
+            #if APPSTORE
             if helperClient != nil {
                 Section("Blip Helper") {
                     LabeledContent("Status") {
@@ -115,6 +116,7 @@ struct SettingsView: View {
                     }
                 }
             }
+            #endif
 
             Section {
                 LabeledContent("Version") {
