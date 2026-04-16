@@ -293,59 +293,52 @@ final class SystemMonitor: ObservableObject {
         return "Mac"
     }
 
-    /// Known Apple Silicon Mac model identifiers → marketing names.
-    /// Covers M1 through M4 generation. Falls back to raw identifier if unknown.
-    private static let modelLookup: [String: String] = [
-        // M1 (2020-2021)
-        "MacBookAir10,1": "MacBook Air 13\" (M1, 2020)",
-        "MacBookPro17,1": "MacBook Pro 13\" (M1, 2020)",
-        "MacBookPro18,1": "MacBook Pro 16\" (M1 Pro, 2021)",
-        "MacBookPro18,2": "MacBook Pro 16\" (M1 Max, 2021)",
-        "MacBookPro18,3": "MacBook Pro 14\" (M1 Pro, 2021)",
-        "MacBookPro18,4": "MacBook Pro 14\" (M1 Max, 2021)",
-        "Macmini9,1": "Mac mini (M1, 2020)",
-        "iMac21,1": "iMac 24\" (M1, 2021)",
-        "iMac21,2": "iMac 24\" (M1, 2021)",
-        "Mac13,1": "Mac Studio (M1 Max, 2022)",
-        "Mac13,2": "Mac Studio (M1 Ultra, 2022)",
-        // M2 (2022-2023)
-        "Mac14,2": "MacBook Air 13\" (M2, 2022)",
-        "Mac14,15": "MacBook Air 15\" (M2, 2023)",
-        "Mac14,7": "MacBook Pro 13\" (M2, 2022)",
-        "Mac14,5": "MacBook Pro 14\" (M2 Pro, 2023)",
-        "Mac14,9": "MacBook Pro 14\" (M2 Max, 2023)",
-        "Mac14,6": "MacBook Pro 16\" (M2 Pro, 2023)",
-        "Mac14,10": "MacBook Pro 16\" (M2 Max, 2023)",
-        "Mac14,3": "Mac mini (M2, 2023)",
-        "Mac14,12": "Mac mini (M2 Pro, 2023)",
-        "Mac14,8": "Mac Pro (M2 Ultra, 2023)",
-        "Mac14,13": "Mac Studio (M2 Max, 2023)",
-        "Mac14,14": "Mac Studio (M2 Ultra, 2023)",
-        // M3 (2023-2025)
-        "Mac15,3": "MacBook Pro 14\" (M3, 2023)",
-        "Mac15,12": "MacBook Air 13\" (M3, 2024)",
-        "Mac15,13": "MacBook Air 15\" (M3, 2024)",
-        "Mac15,4": "iMac 24\" (M3, 2023)",
-        "Mac15,5": "iMac 24\" (M3, 2023)",
-        "Mac15,6": "MacBook Pro 14\" (M3 Pro, 2023)",
-        "Mac15,10": "MacBook Pro 14\" (M3 Max, 2023)",
-        "Mac15,8": "MacBook Pro 14\" (M3 Max, 2023)",
-        "Mac15,7": "MacBook Pro 16\" (M3 Pro, 2023)",
-        "Mac15,11": "MacBook Pro 16\" (M3 Max, 2023)",
-        "Mac15,9": "MacBook Pro 16\" (M3 Max, 2023)",
-        "Mac15,14": "Mac Studio (M3 Ultra, 2025)",
-        // M4 (2024-2025)
-        "Mac16,1": "MacBook Pro 14\" (M4, 2024)",
-        "Mac16,8": "MacBook Pro 14\" (M4 Pro, 2024)",
-        "Mac16,6": "MacBook Pro 14\" (M4 Max, 2024)",
-        "Mac16,7": "MacBook Pro 16\" (M4 Pro, 2024)",
-        "Mac16,5": "MacBook Pro 16\" (M4 Max, 2024)",
-        "Mac16,2": "iMac 24\" (M4, 2024)",
-        "Mac16,3": "iMac 24\" (M4, 2024)",
-        "Mac16,10": "Mac mini (M4, 2024)",
-        "Mac16,11": "Mac mini (M4 Pro, 2024)",
-        "Mac16,9": "Mac Studio (M4 Max, 2025)",
-        "Mac16,12": "MacBook Air 13\" (M4, 2025)",
-        "Mac16,13": "MacBook Air 15\" (M4, 2025)",
-    ]
+    /// Compact model lookup: "id:product,chip,year" tuples decoded at init.
+    /// Keeps binary small — ~1.5 KB vs ~3.5 KB for full string dictionary.
+    private static let modelLookup: [String: String] = {
+        // Format: "id=type,size,chip,year" — decoded into "Type Size (Chip, Year)"
+        // Types: A=MacBook Air, P=MacBook Pro, m=Mac mini, i=iMac, S=Mac Studio, R=Mac Pro
+        let entries: [(String, String)] = [
+            // M1
+            ("MacBookAir10,1", "A,13\",M1,2020"), ("MacBookPro17,1", "P,13\",M1,2020"),
+            ("MacBookPro18,1", "P,16\",M1 Pro,2021"), ("MacBookPro18,2", "P,16\",M1 Max,2021"),
+            ("MacBookPro18,3", "P,14\",M1 Pro,2021"), ("MacBookPro18,4", "P,14\",M1 Max,2021"),
+            ("Macmini9,1", "m,,M1,2020"),
+            ("iMac21,1", "i,24\",M1,2021"), ("iMac21,2", "i,24\",M1,2021"),
+            ("Mac13,1", "S,,M1 Max,2022"), ("Mac13,2", "S,,M1 Ultra,2022"),
+            // M2
+            ("Mac14,2", "A,13\",M2,2022"), ("Mac14,15", "A,15\",M2,2023"),
+            ("Mac14,7", "P,13\",M2,2022"),
+            ("Mac14,5", "P,14\",M2 Pro,2023"), ("Mac14,9", "P,14\",M2 Max,2023"),
+            ("Mac14,6", "P,16\",M2 Pro,2023"), ("Mac14,10", "P,16\",M2 Max,2023"),
+            ("Mac14,3", "m,,M2,2023"), ("Mac14,12", "m,,M2 Pro,2023"),
+            ("Mac14,8", "R,,M2 Ultra,2023"),
+            ("Mac14,13", "S,,M2 Max,2023"), ("Mac14,14", "S,,M2 Ultra,2023"),
+            // M3
+            ("Mac15,3", "P,14\",M3,2023"),
+            ("Mac15,12", "A,13\",M3,2024"), ("Mac15,13", "A,15\",M3,2024"),
+            ("Mac15,4", "i,24\",M3,2023"), ("Mac15,5", "i,24\",M3,2023"),
+            ("Mac15,6", "P,14\",M3 Pro,2023"), ("Mac15,10", "P,14\",M3 Max,2023"),
+            ("Mac15,8", "P,14\",M3 Max,2023"),
+            ("Mac15,7", "P,16\",M3 Pro,2023"), ("Mac15,11", "P,16\",M3 Max,2023"),
+            ("Mac15,9", "P,16\",M3 Max,2023"), ("Mac15,14", "S,,M3 Ultra,2025"),
+            // M4
+            ("Mac16,1", "P,14\",M4,2024"),
+            ("Mac16,8", "P,14\",M4 Pro,2024"), ("Mac16,6", "P,14\",M4 Max,2024"),
+            ("Mac16,7", "P,16\",M4 Pro,2024"), ("Mac16,5", "P,16\",M4 Max,2024"),
+            ("Mac16,2", "i,24\",M4,2024"), ("Mac16,3", "i,24\",M4,2024"),
+            ("Mac16,10", "m,,M4,2024"), ("Mac16,11", "m,,M4 Pro,2024"),
+            ("Mac16,9", "S,,M4 Max,2025"),
+            ("Mac16,12", "A,13\",M4,2025"), ("Mac16,13", "A,15\",M4,2025"),
+        ]
+        let types: [Character: String] = ["A": "MacBook Air", "P": "MacBook Pro", "m": "Mac mini", "i": "iMac", "S": "Mac Studio", "R": "Mac Pro"]
+        var dict = [String: String](minimumCapacity: entries.count)
+        for (id, spec) in entries {
+            let parts = spec.split(separator: ",", omittingEmptySubsequences: false)
+            let type = types[parts[0].first!] ?? "Mac"
+            let size = parts[1].isEmpty ? "" : " \(parts[1])"
+            dict[id] = "\(type)\(size) (\(parts[2]), \(parts[3]))"
+        }
+        return dict
+    }()
 }
