@@ -270,7 +270,7 @@ final class SystemMonitor: ObservableObject {
         if size > 0 {
             var model = [CChar](repeating: 0, count: size)
             sysctlbyname("hw.model", &model, &size, nil, 0)
-            let identifier = String(cString: model)
+            let identifier = String(decoding: model.prefix(while: { $0 != 0 }).map { UInt8(bitPattern: $0) }, as: UTF8.self)
             // Try to resolve the marketing name from the identifier
             if let marketing = Self.modelLookup[identifier] {
                 return marketing
@@ -295,7 +295,6 @@ final class SystemMonitor: ObservableObject {
         "iMac21,2": "iMac 24\" (M1, 2021)",
         "Mac13,1": "Mac Studio (M1 Max, 2022)",
         "Mac13,2": "Mac Studio (M1 Ultra, 2022)",
-        "Mac14,5": "Mac Pro (M2 Ultra, 2023)",
         // M2
         "Mac14,2": "MacBook Air (M2, 2022)",
         "Mac14,15": "MacBook Air 15\" (M2, 2023)",
