@@ -71,29 +71,43 @@ final class SystemMonitor: ObservableObject {
         // Pass user's ping target preference to network monitor
         networkMonitor.pingTarget = pingTarget.isEmpty ? "1.1.1.1" : pingTarget
 
-        // Run fast monitors concurrently
+        // Run monitors concurrently.
+        // In the App Store build, GPU/fan/process monitors are no-ops (helper provides
+        // this data), so skip spawning threads for them to reduce CPU overhead.
         async let cpuRead = Task.detached { [cpuMonitor] in cpuMonitor.read() }.value
         async let memRead = Task.detached { [memoryMonitor] in memoryMonitor.read() }.value
         async let netRead = Task.detached { [networkMonitor] in networkMonitor.read() }.value
-        async let gpuRead = Task.detached { [gpuMonitor] in gpuMonitor.read() }.value
         async let battRead = batteryMonitor.read()
-        async let fanRead = fanMonitor.read()
-        async let procRead = Task.detached { [processMonitor] in await processMonitor.read() }.value
-
-        // Poll the helper only when sandboxed (MAS version).
-        // The direct-download version reads everything in-process.
-        if isSandboxed {
+        #if APPSTORE
+        let gpuRead = gpuMonitor.read()     // No IOKit work, just returns cached name/cores
+        let fanRead = FanStats()            // SMC stubbed out, returns empty
+        let procRead: (byCPU: [ProcessInfo], byMemory: [ProcessInfo]) = ([], [])
+        // Only poll helper if it appears to be installed
+        if isSandboxed && helperClient.isHelperInstalled {
             await helperClient.poll()
         }
+        #else
+        async let gpuRead = Task.detached { [gpuMonitor] in gpuMonitor.read() }.value
+        async let fanRead = fanMonitor.read()
+        async let procRead = Task.detached { [processMonitor] in await processMonitor.read() }.value
+        #endif
+
         let helper = isSandboxed ? helperClient.latestSnapshot : nil
 
         let cpu = await cpuRead
         let memory = await memRead
         let network = await netRead
+        #if APPSTORE
+        var gpu = gpuRead
+        var battery = await battRead
+        var fans = fanRead
+        let procs = procRead
+        #else
         var gpu = await gpuRead
         var battery = await battRead
         var fans = await fanRead
         let procs = await procRead
+        #endif
 
         // Disk is slow — poll every 5th cycle (10 seconds)
         diskPollCount += 1
