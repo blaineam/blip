@@ -5,7 +5,8 @@
 ### Mac App Store
 - **App Store release** — Blip is now available on the Mac App Store as "Blip Stats" ($2.99)
 - **Sandboxed gracefully** — features that require hardware-level access (disk I/O, GPU utilization, fan speeds, temperatures, top processes) are hidden cleanly when the optional Blip Helper isn't installed, instead of showing zeroed-out data
-- **Model name resolution** — built-in lookup table translates hardware identifiers (e.g. Mac16,8) to marketing names (MacBook Pro 14" M4 Max) without needing system_profiler
+- **Model name resolution** — built-in lookup table translates hardware identifiers (e.g. Mac16,8) to marketing names (MacBook Pro 14" M4 Pro) without needing system_profiler
+- **Memory footprint** — App Store build now reports Blip's own memory usage using public Mach API (task_info) instead of showing 0 MB
 - **Export compliance** — ITSAppUsesNonExemptEncryption set to skip the encryption dialog on every upload
 
 ### BlipHelper
@@ -25,6 +26,7 @@
 ### CI/CD
 - **DMG pre-releases** — PR pre-release builds now package as DMGs instead of zips, consistent with the release pipeline
 - **Reliable DMG packaging** — fixed detach failures on volumes with spaces in the name by using device-path-based unmounting
+- **Signed & notarized PR builds** — PR pre-release DMGs are now code-signed with Developer ID and notarized, so testers can install without Gatekeeper bypass
 
 ## v1.3.0
 
