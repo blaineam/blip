@@ -37,7 +37,7 @@ final class SystemMonitor: ObservableObject {
     /// True when the app is running inside App Sandbox (MAS version).
     /// The direct-download version is unsandboxed and never needs the helper.
     private let isSandboxed: Bool = {
-        ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+        Foundation.ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
     }()
 
     private var pollTask: Task<Void, Never>?
