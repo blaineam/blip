@@ -123,15 +123,16 @@ jobs:
           DMG_FINAL="dist/Blip-PR${PR_NUM}.dmg"
 
           hdiutil create -size 50m -fs HFS+ -volname "Blip" -ov "$DMG_TEMP"
-          MOUNT_POINT=$(hdiutil attach "$DMG_TEMP" -readwrite -noverify -noautoopen | grep "Blip" | awk '{print $NF}' | head -1)
-          if [[ -z "$MOUNT_POINT" ]]; then MOUNT_POINT="/Volumes/Blip"; fi
+          BLIP_ATTACH_OUT=$(hdiutil attach "$DMG_TEMP" -readwrite -noverify -noautoopen)
+          BLIP_DEV=$(echo "$BLIP_ATTACH_OUT" | head -1 | awk '{print $1}')
+          BLIP_MOUNT="/Volumes/Blip"
 
-          cp -R "$APP" "$MOUNT_POINT/"
-          ln -s /Applications "$MOUNT_POINT/Applications"
+          cp -R "$APP" "$BLIP_MOUNT/"
+          ln -s /Applications "$BLIP_MOUNT/Applications"
 
           if [[ -f ".build/assets/dmg-background.jpg" ]]; then
-            mkdir -p "$MOUNT_POINT/.background"
-            cp ".build/assets/dmg-background.jpg" "$MOUNT_POINT/.background/background.jpg"
+            mkdir -p "$BLIP_MOUNT/.background"
+            cp ".build/assets/dmg-background.jpg" "$BLIP_MOUNT/.background/background.jpg"
           fi
 
           osascript <<'APPLESCRIPT' || true
@@ -161,8 +162,8 @@ jobs:
           APPLESCRIPT
 
           sync
-          hdiutil detach "$MOUNT_POINT" -force 2>/dev/null || true
-          sleep 1
+          hdiutil detach "$BLIP_DEV" -force 2>/dev/null || true
+          sleep 2
           hdiutil convert "$DMG_TEMP" -format UDZO -imagekey zlib-level=9 -o "$DMG_FINAL" -ov
           rm -f "$DMG_TEMP"
 
@@ -181,15 +182,16 @@ jobs:
             HELPER_FINAL="dist/BlipHelper-PR${PR_NUM}.dmg"
 
             hdiutil create -size 20m -fs HFS+ -volname "Blip Helper" -ov "$HELPER_TEMP"
-            MOUNT_POINT=$(hdiutil attach "$HELPER_TEMP" -readwrite -noverify -noautoopen | grep "Blip Helper" | awk '{print $NF}' | head -1)
-            if [[ -z "$MOUNT_POINT" ]]; then MOUNT_POINT="/Volumes/Blip Helper"; fi
+            HELPER_ATTACH_OUT=$(hdiutil attach "$HELPER_TEMP" -readwrite -noverify -noautoopen)
+            HELPER_DEV=$(echo "$HELPER_ATTACH_OUT" | head -1 | awk '{print $1}')
+            HELPER_MOUNT="/Volumes/Blip Helper"
 
-            cp -R "$HELPER_APP" "$MOUNT_POINT/"
-            ln -s /Applications "$MOUNT_POINT/Applications"
+            cp -R "$HELPER_APP" "$HELPER_MOUNT/"
+            ln -s /Applications "$HELPER_MOUNT/Applications"
 
             if [[ -f ".build/assets/dmg-background.jpg" ]]; then
-              mkdir -p "$MOUNT_POINT/.background"
-              cp ".build/assets/dmg-background.jpg" "$MOUNT_POINT/.background/background.jpg"
+              mkdir -p "$HELPER_MOUNT/.background"
+              cp ".build/assets/dmg-background.jpg" "$HELPER_MOUNT/.background/background.jpg"
             fi
 
             osascript <<'APPLESCRIPT' || true
@@ -219,8 +221,8 @@ jobs:
           APPLESCRIPT
 
             sync
-            hdiutil detach "$MOUNT_POINT" -force 2>/dev/null || true
-            sleep 1
+            hdiutil detach "$HELPER_DEV" -force 2>/dev/null || true
+            sleep 2
             hdiutil convert "$HELPER_TEMP" -format UDZO -imagekey zlib-level=9 -o "$HELPER_FINAL" -ov
             rm -f "$HELPER_TEMP"
           fi
