@@ -101,7 +101,7 @@ chmod +x Scripts/build-dmg.sh
                   |                      |         | Charts |
                   |  MacBook Pro (M4)    |         +--------+
                   |  Up 3d 2h | Nominal  |
-                  |  Blip v1.4.1         |
+                  |  Blip v1.4.2         |
                   +----------------------+
 ```
 

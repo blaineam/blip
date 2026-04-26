@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.2
+
+### UI
+- **Main popover background matches detail panel** — the menu bar dropdown now uses the same `.popover` visual-effect material as the hover detail panels, so it no longer looks washed-out next to them
+- **Detail panel corners now match the main popover** — bumped detail panel corner radius to 20pt and applied it at the AppKit layer (via `NSVisualEffectView.maskImage` + hosting view `cornerRadius`) so the blur actually rounds with the content; previously SwiftUI's `clipShape` was being ignored by the visual-effect blur and corners stayed square
+- **Network status dot is monochrome-aware and vanishes when offline** — the menu bar connectivity dot now follows the same `resolvedColor` logic as the bars (so it goes monochrome in `MENU_BAR` accent mode), and instead of turning red when disconnected it disappears entirely so absence-of-dot signals offline state
+
 ## v1.4.1
 
 ### Settings

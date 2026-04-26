@@ -96,9 +96,9 @@ struct StatusItemView: View {
 
     @ViewBuilder
     private var networkDot: some View {
-        if showNetworkDot {
+        if showNetworkDot && monitor.snapshot.network.isConnected {
             Circle()
-                .fill(monitor.snapshot.network.isConnected ? Color.green : Color.red)
+                .fill(resolvedColor(.green))
                 .frame(width: 4, height: 4)
         }
     }

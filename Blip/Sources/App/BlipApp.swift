@@ -143,14 +143,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // Match the popover's corner radius (NSPopover uses ~10pt on macOS)
-        let cornerRadius: CGFloat = 10
+        // Match the popover's corner radius (rounded to feel like the main panel)
+        let cornerRadius: CGFloat = 20
 
         let contentView = detailContent(for: section)
         let wrappedView = AnyView(
             contentView
                 .background(
-                    VisualEffectView(material: .popover, blendingMode: .behindWindow)
+                    VisualEffectView(material: .popover, blendingMode: .behindWindow, cornerRadius: cornerRadius)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
                 .overlay(
@@ -182,6 +182,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Ensure no opaque background leaks through rounded corners
         hostingView.wantsLayer = true
         hostingView.layer?.backgroundColor = .clear
+        hostingView.layer?.cornerRadius = cornerRadius
+        hostingView.layer?.masksToBounds = true
+        if #available(macOS 13.0, *) {
+            hostingView.layer?.cornerCurve = .continuous
+        }
 
         // Position snug to the left of the popover (1px gap)
         let popoverFrame = popoverWindow.frame
@@ -305,12 +310,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func refreshDetailContent(for section: PopoverSection) {
         guard detailPanel != nil else { return }
 
-        let cornerRadius: CGFloat = 10
+        let cornerRadius: CGFloat = 20
         let contentView = detailContent(for: section)
         let wrappedView = AnyView(
             contentView
                 .background(
-                    VisualEffectView(material: .popover, blendingMode: .behindWindow)
+                    VisualEffectView(material: .popover, blendingMode: .behindWindow, cornerRadius: cornerRadius)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
                 .overlay(
@@ -348,17 +353,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct VisualEffectView: NSViewRepresentable {
     let material: NSVisualEffectView.Material
     let blendingMode: NSVisualEffectView.BlendingMode
+    var cornerRadius: CGFloat = 0
 
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
         view.material = material
         view.blendingMode = blendingMode
         view.state = .active
+        if cornerRadius > 0 {
+            view.maskImage = Self.roundedMask(cornerRadius: cornerRadius)
+        }
         return view
     }
 
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = material
         nsView.blendingMode = blendingMode
+        if cornerRadius > 0 {
+            nsView.maskImage = Self.roundedMask(cornerRadius: cornerRadius)
+        } else {
+            nsView.maskImage = nil
+        }
+    }
+
+    private static func roundedMask(cornerRadius: CGFloat) -> NSImage {
+        let edge = cornerRadius * 2 + 1
+        let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: cornerRadius, yRadius: cornerRadius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: cornerRadius, left: cornerRadius, bottom: cornerRadius, right: cornerRadius)
+        image.resizingMode = .stretch
+        return image
     }
 }

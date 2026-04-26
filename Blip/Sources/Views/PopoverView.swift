@@ -103,6 +103,9 @@ struct PopoverView: View {
             .padding(.bottom, 6)
         }
         .frame(width: 260)
+        .background(
+            VisualEffectView(material: .popover, blendingMode: .behindWindow)
+        )
     }
 
     @ViewBuilder
