@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.4.4
+
+### Icon
+- **Refreshed app icon to match Apple's macOS guidelines** — the squircle now fills the canvas edge-to-edge and the artwork (CPU/MEM/HD bars + radar blip dot) is scaled up to occupy the icon properly instead of floating in a sea of padding; affects the in-app icon, the DMG installer, the helper app icon, and all web/portfolio icons
+
 ## v1.4.3
 
 ### Fixes

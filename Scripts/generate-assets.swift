@@ -95,11 +95,11 @@ func drawIcon(size: CGFloat) -> NSImage {
     gradient.draw(in: path, angle: -45)
 
     // Draw 3 horizontal monitor bars (CPU/MEM/HD style)
-    let barWidth = size * 0.5
-    let barHeight = size * 0.05
-    let barX = size * 0.25
-    let barSpacing = size * 0.09
-    let barStartY = size * 0.55
+    let barWidth = size * 0.72
+    let barHeight = size * 0.075
+    let barX = size * 0.14
+    let barSpacing = size * 0.135
+    let barStartY = size * 0.42
 
     let barColors: [(NSColor, CGFloat)] = [
         (NSColor(red: 0.04, green: 0.52, blue: 1.0, alpha: 1.0), 0.65),  // Blue - CPU
@@ -121,8 +121,8 @@ func drawIcon(size: CGFloat) -> NSImage {
     }
 
     // Draw a radar "blip" dot above bars
-    let dotSize = size * 0.1
-    let dotCenter = NSPoint(x: size * 0.5, y: size * 0.72)
+    let dotSize = size * 0.15
+    let dotCenter = NSPoint(x: size * 0.5, y: size * 0.74)
 
     // Outer glow
     let glowSize = dotSize * 3
@@ -243,7 +243,7 @@ func drawHelperIcon(size: CGFloat) -> NSImage {
     let boltGlow = NSColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 0.3)
 
     // Outer glow
-    let glowSize = size * 0.5
+    let glowSize = size * 0.75
     let glowRect = NSRect(
         x: (size - glowSize) / 2,
         y: (size - glowSize) / 2,
@@ -258,26 +258,26 @@ func drawHelperIcon(size: CGFloat) -> NSImage {
     // Draw lightning bolt shape
     let bolt = NSBezierPath()
     let cx = size * 0.5
-    let topY = size * 0.82
-    let botY = size * 0.18
-    let midY = size * 0.52
+    let topY = size * 0.92
+    let botY = size * 0.22
+    let midY = size * 0.55
 
-    bolt.move(to: NSPoint(x: cx - size * 0.02, y: topY))          // top
-    bolt.line(to: NSPoint(x: cx - size * 0.12, y: midY))          // left notch
-    bolt.line(to: NSPoint(x: cx + size * 0.02, y: midY + size * 0.04)) // right notch
-    bolt.line(to: NSPoint(x: cx + size * 0.02, y: botY))          // bottom
-    bolt.line(to: NSPoint(x: cx + size * 0.12, y: size * 0.48))   // right upper
-    bolt.line(to: NSPoint(x: cx - size * 0.02, y: size * 0.44))   // left upper
+    bolt.move(to: NSPoint(x: cx - size * 0.03, y: topY))          // top
+    bolt.line(to: NSPoint(x: cx - size * 0.18, y: midY))          // left notch
+    bolt.line(to: NSPoint(x: cx + size * 0.03, y: midY + size * 0.06)) // right notch
+    bolt.line(to: NSPoint(x: cx + size * 0.03, y: botY))          // bottom
+    bolt.line(to: NSPoint(x: cx + size * 0.18, y: size * 0.50))   // right upper
+    bolt.line(to: NSPoint(x: cx - size * 0.03, y: size * 0.44))   // left upper
     bolt.close()
 
     boltColor.setFill()
     bolt.fill()
 
     // Small "helper" bars at bottom
-    let barWidth = size * 0.4
-    let barHeight = size * 0.03
-    let barX = size * 0.3
-    let barY = size * 0.12
+    let barWidth = size * 0.6
+    let barHeight = size * 0.045
+    let barX = size * 0.2
+    let barY = size * 0.10
 
     let barBg = NSColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 0.15)
     let bgRect = NSRect(x: barX, y: barY, width: barWidth, height: barHeight)
